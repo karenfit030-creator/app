@@ -102,7 +102,7 @@
   <div class="card">
     <ul class="tips">
       <li><b>La primera vez</b> se descarga el motor de video (~25 MB). Después queda en caché.</li>
-      <li>Puede tardar entre 1 y 3 minutos por cada 30 segundos de video. Deja la pantalla prendida y la pestaña abierta.</li>
+      <li>Puede tardar entre 2 y 5 minutos por cada 30 segundos de video (el modo WhatsApp comprime con más cuidado, por eso es más lento). Deja la pantalla prendida y la pestaña abierta.</li>
       <li>Funciona mejor con videos de menos de 2–3 minutos. Si el celular se queda sin memoria la página se recarga.</li>
       <li>Si los colores salen "lavados", el video es HDR. En iPhone: Ajustes → Cámara → Grabar video → apaga <b>Video HDR</b>.</li>
       <li>Al subir el estado, si WhatsApp muestra la opción <b>HD</b>, actívala.</li>
@@ -243,13 +243,14 @@
 
       // WhatsApp: peso justo para que casi no lo toque.
       // Instagram: más bitrate, para que su recompresión parta de algo muy limpio.
-      const crf = ig ? '18' : '21';
-      const maxrate = ig ? '8000k' : (q === '1080' ? '5000k' : '2500k');
-      const bufsize = ig ? '16000k' : (q === '1080' ? '10000k' : '5000k');
+      // WhatsApp HD: mismos valores que usa PureStatus (crf 20, tope 3800k, preset medium)
+      const crf = ig ? '18' : '20';
+      const maxrate = ig ? '8000k' : (q === '1080' ? '3800k' : '2500k');
+      const bufsize = ig ? '16000k' : (q === '1080' ? '5700k' : '3750k');
       const enc = [
         '-vf', buildFilter(q, fmt) + ',format=yuv420p',
         '-r', '30',
-        '-c:v', 'libx264', '-preset', 'veryfast', '-profile:v', 'high', '-level', '4.1',
+        '-c:v', 'libx264', '-preset', ig ? 'veryfast' : 'medium', '-profile:v', 'high', '-level', '4.0',
         '-crf', crf, '-maxrate', maxrate, '-bufsize', bufsize,
         '-c:a', 'aac', '-b:a', ig ? '192k' : '128k', '-ac', '2', '-ar', ig ? '48000' : '44100',
         '-map_metadata', '-1', '-movflags', '+faststart'
