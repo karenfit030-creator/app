@@ -71,8 +71,8 @@
     <div id="qRow">
       <label class="t">Calidad</label>
       <div class="seg">
-        <input type="radio" name="q" id="q720" value="720" checked><label for="q720">Normal<small>720p · más rápido</small></label>
-        <input type="radio" name="q" id="q1080" value="1080"><label for="q1080">HD<small>1080p · para estado HD</small></label>
+        <input type="radio" name="q" id="q720" value="720"><label for="q720">Normal<small>720p · más rápido</small></label>
+        <input type="radio" name="q" id="q1080" value="1080" checked><label for="q1080">HD<small>1080p · para estado HD</small></label>
       </div>
     </div>
     <div id="igNote" class="info hidden">Instagram: sale en 1080p con más calidad de la normal, para que Instagram tenga material bueno al recomprimir. Tarda un poco más.</div>
@@ -230,6 +230,8 @@
       setStatus('Preparando video…');
       ff.FS('writeFile', inName, await FFmpeg.fetchFile(file));
 
+      let hdr = false;
+      ff.setLogger(({ message }) => { if (/arib-std-b67|smpte2084|bt2020/i.test(message)) hdr = true; });
       let part = 0;
       ff.setProgress(({ ratio }) => {
         if (!(ratio >= 0)) return;
@@ -246,13 +248,14 @@
       // WhatsApp HD: mismos valores que usa PureStatus (crf 20, tope 3800k, preset medium)
       const crf = ig ? '18' : '20';
       const maxrate = ig ? '8000k' : (q === '1080' ? '3800k' : '2500k');
-      const bufsize = ig ? '16000k' : (q === '1080' ? '5700k' : '3750k');
+      const bufsize = ig ? '16000k' : (q === '1080' ? '3800k' : '3750k');
       const enc = [
         '-vf', buildFilter(q, fmt) + ',format=yuv420p',
         '-r', '30',
         '-c:v', 'libx264', '-preset', ig ? 'veryfast' : 'medium', '-profile:v', 'high', '-level', '4.0',
         '-crf', crf, '-maxrate', maxrate, '-bufsize', bufsize,
         '-c:a', 'aac', '-b:a', ig ? '192k' : '128k', '-ac', '2', '-ar', ig ? '48000' : '44100',
+        '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709',
         '-map_metadata', '-1', '-movflags', '+faststart'
       ];
       // Una pasada por parte: cortes exactos de 30/60 s
@@ -275,7 +278,8 @@
 
       bar.style.width = '100%';
       const total = blobs.reduce((s, b) => s + b.blob.size, 0);
-      setStatus(`✅ Listo en ${fmtTime((Date.now() - t0) / 1000)} · ${mb(file.size)} → ${mb(total)}`);
+      setStatus(`✅ Listo en ${fmtTime((Date.now() - t0) / 1000)} · ${mb(file.size)} → ${mb(total)}` +
+        (hdr ? ' · ⚠️ Este video es HDR: los colores pueden salir un poco lavados. Graba con Video HDR apagado.' : ''), hdr ? 'warn' : '');
       showResults(blobs);
     } catch (err) {
       console.error(err);
